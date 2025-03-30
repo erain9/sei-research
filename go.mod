@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/cosmos/cosmos-sdk v0.47.5
 	github.com/cosmos/go-bip39 v1.0.0
+	github.com/mutecomm/go-sqlcipher/v4 v4.4.2
 )
 
 require (

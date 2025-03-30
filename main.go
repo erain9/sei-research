@@ -4,11 +4,26 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/go-bip39"
+)
+
+// Account structure is unchanged, just renamed fields to be more consistent
+type Account struct {
+	Mnemonic   string
+	Address    string
+	PubKey     string
+	PrivateKey string
+}
+
+// Default configuration
+const (
+	DefaultAccountCount     = 10
+	DefaultStorageDirectory = ".sei-accounts"
 )
 
 func init() {
@@ -20,15 +35,7 @@ func init() {
 	config.Seal()
 }
 
-// Account represents a Sei account with its components
-type Account struct {
-	Mnemonic   string
-	Address    string
-	PubKey     string
-	PrivateKey string
-}
-
-// GenerateAccount creates a new account with mnemonic
+// generateAccount creates a new account with mnemonic
 func generateAccount() (*Account, error) {
 	// Generate a random mnemonic
 	entropySizeInBits := 256 // 24 words
@@ -77,10 +84,44 @@ func generateAccount() (*Account, error) {
 }
 
 func main() {
-	fmt.Println("Generating 10 SEI Accounts")
+	// Create a home directory for storing accounts if not specified
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Printf("Error getting home directory: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Create storage directory
+	storageDir := filepath.Join(homeDir, DefaultStorageDirectory)
+
+	// Initialize account store for secure storage
+	accountStore, err := NewAccountStore(storageDir)
+	if err != nil {
+		fmt.Printf("Error initializing account store: %v\n", err)
+		os.Exit(1)
+	}
+	defer accountStore.Close()
+
+	// Check if we already have accounts
+	count, err := accountStore.CountAccounts()
+	if err != nil {
+		fmt.Printf("Error counting accounts: %v\n", err)
+		os.Exit(1)
+	}
+
+	// If we already have accounts, retrieve and display them
+	if count >= DefaultAccountCount {
+		fmt.Println("Using existing SEI accounts from secure storage")
+		printStoredAccounts(accountStore)
+		return
+	}
+
+	// We need to generate new accounts
+	fmt.Printf("Generating %d SEI Accounts\n", DefaultAccountCount)
 	fmt.Println("=======================")
 
-	for i := 1; i <= 10; i++ {
+	// Generate and store accounts
+	for i := count + 1; i <= DefaultAccountCount; i++ {
 		// Generate new account
 		account, err := generateAccount()
 		if err != nil {
@@ -88,8 +129,36 @@ func main() {
 			os.Exit(1)
 		}
 
+		// Save account to secure storage
+		if err := accountStore.SaveAccount(account); err != nil {
+			fmt.Printf("Error saving account %d: %v\n", i, err)
+			os.Exit(1)
+		}
+
 		// Print account details
 		fmt.Printf("Account #%d\n", i)
+		fmt.Printf("Address: %s\n", account.Address)
+		fmt.Printf("Mnemonic: %s\n", account.Mnemonic)
+		fmt.Printf("Public Key: %s\n", account.PubKey)
+		fmt.Printf("Private Key: %s\n", account.PrivateKey)
+		fmt.Println("=======================")
+	}
+
+	fmt.Println("All accounts have been securely stored on disk.")
+	fmt.Printf("You can find them in: %s\n", storageDir)
+}
+
+// printStoredAccounts displays all accounts from secure storage
+func printStoredAccounts(store *AccountStore) {
+	accounts, err := store.GetAccounts()
+	if err != nil {
+		fmt.Printf("Error retrieving accounts: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("=======================")
+	for i, account := range accounts {
+		fmt.Printf("Account #%d\n", i+1)
 		fmt.Printf("Address: %s\n", account.Address)
 		fmt.Printf("Mnemonic: %s\n", account.Mnemonic)
 		fmt.Printf("Public Key: %s\n", account.PubKey)

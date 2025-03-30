@@ -11,6 +11,32 @@ The account generator creates 10 SEI accounts, each including:
 - Public key
 - Private key
 
+## Secure Storage
+
+The account generator now includes secure, encrypted storage functionality:
+
+- Accounts are stored in an encrypted SQLite database (using SQLCipher with AES-256 encryption)
+- The database automatically stores generated accounts for later use
+- When run, the tool checks for existing accounts before generating new ones
+- Database files are excluded from Git using .gitignore
+
+### Security Features
+
+- AES-256 encryption for all stored account data
+- Database is password-protected (customize in the code)
+- Only stores accounts locally on your machine
+- WAL journaling mode for durability and crash resistance
+- Thread-safe implementation with mutex protection
+
+### Database Location
+
+By default, the encrypted database is stored in:
+```
+~/.sei-accounts/sei_accounts.db
+```
+
+You can change the storage location by modifying the `DefaultStorageDirectory` constant in the code.
+
 ## Understanding Cosmos Accounts
 
 ### What is a Cosmos Account?
@@ -90,6 +116,7 @@ The BIP39 process:
 ## Requirements
 
 - Go 1.20+
+- CGO enabled (for SQLCipher compilation)
 
 ## Installation
 
@@ -111,10 +138,14 @@ go mod tidy
 Run the account generator:
 
 ```bash
-go run main.go
+go run main.go storage.go
 ```
 
-The program will generate 10 SEI accounts and display their details.
+The program will:
+1. Check for existing accounts in the encrypted database
+2. If accounts exist, display them
+3. If no accounts exist, generate 10 new accounts and store them
+4. Display the account details in the terminal
 
 ### Output
 

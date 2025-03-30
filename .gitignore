@@ -28,6 +28,12 @@ sei-account-generator
 # Output files
 *.txt
 
+# Database files (for secure storage)
+*.db
+*.db-shm
+*.db-wal
+.sei-accounts/
+
 # OS specific
 .DS_Store
 .idea/
